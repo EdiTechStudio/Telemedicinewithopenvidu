@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+</head>
+<body>
+  <p id="txt"><%= dct %></p>
+  <center> <h1><%= name %> <%= message %></h1>
+   
+  <br>
+  <h1>Doctors List</h1><br>
+  <select id="opts">
+
+  </select><br><br><br>
+  <a href="<%= bod %>"> <%= linkm %> </a>
+  </center>
+<a href="./meet"><input type="button" value="Meet"></a>
+</body>
+<script>
+  var per=document.getElementById("txt");
+  const changed=per.innerHTML;
+  const select=document.getElementById("opts");
+  per.style.display="none"
+  console.log(changed);
+  var words = changed.split(",");
+  console.log(words);
+  words.forEach((word)=>{
+    var opt = document.createElement('option');
+    opt.innerHTML =word;
+    select.appendChild(opt);
+  })
+  per.innerHTML=changed.replaceAll(",", " ");
+</script>
+</html>
