@@ -6,7 +6,9 @@ const UserSchema = new mongoose.Schema(
 		firstname: { type: "string", required: true },
 		lastname: { type: "string", required: true },
 		number: { type: "string", required: true, unique: true},
-		UserType: { type: "string", required: true}
+		UserType: { type: "string", required: true},
+		meet: { type: "string", required: true}
+		
 	},
 	{ collection: "users" }
 );

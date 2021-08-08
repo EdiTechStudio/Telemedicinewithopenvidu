@@ -25,7 +25,7 @@ const bcrypt = require("bcryptjs");
 var express = require('express');
 var fs = require('fs');
 var session = require('express-session');
-var https = require('https');
+var http = require('http');
 var bodyParser = require('body-parser'); // Pull information from HTML POST (express4)
 var app = express(); // Create our app with express
 
@@ -50,21 +50,17 @@ var options = {
     key: fs.readFileSync('openvidukey.pem'),
     cert: fs.readFileSync('openviducert.pem')
 };
-https.createServer(options, app).listen(8080);
+http.createServer(options, app).listen(8080);
 
 // Mock database
 var users = [{
     user: "publisher1",
     pass: "pass",
     role: OpenViduRole.PUBLISHER
-}, {
+},  {
     user: "publisher2",
     pass: "pass",
     role: OpenViduRole.PUBLISHER
-}, {
-    user: "subscriber",
-    pass: "pass",
-    role: OpenViduRole.SUBSCRIBER
 }];
 
 // Environment variable: URL where our OpenVidu server is listening
@@ -80,14 +76,14 @@ var mapSessions = {};
 // Collection to pair session names with tokens
 var mapSessionNamesTokens = {};
 
-console.log("App listening on port 5000");
+console.log("App listening on port 8080");
 
 /* CONFIGURATION */
 
 
 
 /* REST API */
-mongoose.connect("mongodb://Localhost:27017/test11", {
+mongoose.connect("mongodb://Localhost:27017/testx", {
 	useNewUrlParser: true,
 	useUnifiedTopology: true,
 	useCreateIndex: true
@@ -97,18 +93,7 @@ db.on("error", () => console.log("Error in connecting to Mongo"));
 db.once("open", () => console.log("Connected to database"));
 
 
-app.post('/meet', loginController);
-app.get('/meet', loginController);
 
-function loginController(req, res) {
-    if (req.session.loggedUser) { // User is logged
-        user = req.session.loggedUser;
-        res.redirect('/dashboard');
-    } else { // User is not logged
-        req.session.destroy();
-        res.render('index.ejs');
-    }
-}
 
 
 
@@ -157,14 +142,17 @@ app.post("/signup", async (req, res, cb) => {
 		var number = req.body.number;
 		var userType = req.body.type;
 		var password = await bcrypt.hash(password, 10);
-
+var meet = "nonep";
 		data = {
 			firstname: firstName,
 			lastname: lastName,
 			username: username,
 			password: password,
 			number: number,
-			UserType: userType
+			meet: meet,
+			UserType: userType,
+			
+			
 		};
 		otp = Math.floor(1000 + Math.random() * 9000);
 		console.log(otp);
@@ -224,6 +212,7 @@ app.post("/otpind", async (req, res) => {
 				}
 				throw e;
 			}
+			console.log(Object.values(data)[Object.values(data).length - 1]);
 			return res.render("finish.ejs");
 	}
 	else {
@@ -264,14 +253,16 @@ app.post("/logind", async (req, res) => {
 			console.log("logged in");
 			dctrlist=await Doctors.find().lean();
 			arr1=[];
+			ViewName=patientlogin.firstname + " " + patientlogin.lastname;
 			dctrlist.forEach((dctr) => {
 				
 // console.log(dctr.firstname);
 mainname=dctr.firstname+" "+dctr.lastname;
-console.log(mainname);
+// console.log(mainname);
 arr1.push(mainname);
 			});
-			console.log(arr1);
+			utype="patient";
+			// console.log(arr1);
 			res.render("logged.ejs", {
 				dct:arr1,
 				name: "",
@@ -298,6 +289,8 @@ arr1.push(mainname);
 	} else if (doctorlogin != null) {
 		if (await bcrypt.compare(loginpow, doctorlogin.password)) {
 			console.log("logged in");
+			utype="doctor";
+			ViewName=doctorlogin.firstname + " " + doctorlogin.lastname;
 			res.render("noreg.ejs", {
 				name: "",
 				message:
@@ -325,6 +318,8 @@ arr1.push(mainname);
 	else if (stafflogin != null) {
 		if (await bcrypt.compare(loginpow, stafflogin.password)) {
 			console.log("logged in");
+			utype="staff";
+			ViewName=stafflogin.firstname + " " + stafflogin.lastname;
 			res.render("noreg.ejs", {
 				name: "",
 				message:
@@ -458,7 +453,10 @@ app.post("/newpass", async (req, res) => {
 	});
 });
 
+app.post("/selected", (req, res) => {
 
+
+});
 
 
 
@@ -483,58 +481,79 @@ app.get("/regis", (req, res) => {
 // 	res.redirect('regis.ejs');
 // });
 
+app.post('/logind/meet', loginController);
+app.get('/logind/meet', loginController);
 
+async function loginController(req, res) {
+	console.log(req.body.opts);
+	dcit=req.body.opts;
+	doctorfind = await Doctors.findOne({ firstname: dcit }).lean();
+	console.log(doctorfind);
+	if (utype == "patient"){
+	const updatepasst = async _id => {
+		const result = await Doctors.updateOne(
+			{ _id },
+			{
+				$set: {
+					meet: ViewName
+				}
+			}
+		);
+		console.log("updated successfully");
+	};
+	updatepasst(doctorfind._id);
+}
+	res.redirect('/dashboard');
+}
 
 app.post('/dashboard', dashboardController);
 app.get('/dashboard', dashboardController);
 
 function dashboardController(req, res) {
 
-    // Check if the user is already logged in
-    if (isLogged(req.session)) {
-        // User is already logged. Immediately return dashboard
-        user = req.session.loggedUser;
-        res.render('dashboard.ejs', {
-            user: user
-        });
-    } else {
+    // // Check if the user is already logged in
+    // if (isLogged(req.session)) {
+    //     // User is already logged. Immediately return dashboard
+    //     user = req.session.loggedUser;
+    //     res.render('dashboard.ejs', {
+    //         user: user
+    //     });
+    // } else {
         // User wasn't logged and wants to
 
         // Retrieve params from POST body
-        var user = req.body.user;
-        var pass = req.body.pass;
-        console.log("Logging in | {user, pass}={" + user + ", " + pass + "}");
+        // var user = req.body.user;
+        // var pass = req.body.pass;
+        // console.log("Logging in | {user, pass}={" + user + ", " + pass + "}");
 
-        if (login(user, pass)) { // Correct user-pass
-            // Validate session and return OK
-            // Value stored in req.session allows us to identify the user in future requests
-            console.log("'" + user + "' has logged in");
+        // if (login(user, pass)) { // Correct user-pass
+        //     // Validate session and return OK
+        //     // Value stored in req.session allows us to identify the user in future requests
+        //     console.log("'" + user + "' has logged in");
+	
+		user='publisher1';
             req.session.loggedUser = user;
-            res.render('dashboard.ejs', {
-                user: user
-            });
-        } else { // Wrong user-pass
-            // Invalidate session and return index template
-            console.log("'" + user + "' invalid credentials");
-            req.session.destroy();
-            res.redirect('/');
-        }
-    }
+            res.render('dashboard.ejs');
+        // } else { // Wrong user-pass
+        //     // Invalidate session and return index template
+        //     console.log("'" + user + "' invalid credentials");
+        //     req.session.destroy();
+        //     res.redirect('/');
+        // }
+    // }
 }
 
 app.post('/session', (req, res) => {
-    if (!isLogged(req.session)) {
-        req.session.destroy();
-        res.redirect('/');
-    } else {
+ 
         // The nickname sent by the client
-        var clientData = req.body.data;
+        var clientData = ViewName;
         // The video-call to connect
+
         var sessionName = req.body.sessionname;
 
         // Role associated to this user
-        var role = users.find(u => (u.user === req.session.loggedUser)).role;
-
+        // var role = users.find(u => (u.user === req.session.loggedUser)).role;
+console.log(req.session.loggedUser);
         // Optional data to be passed to other users when this user connects to the video-call
         // In this case, a JSON with the value we stored in the req.session object on login
         var serverData = JSON.stringify({ serverData: req.session.loggedUser });
@@ -544,7 +563,7 @@ app.post('/session', (req, res) => {
         // Build connectionProperties object with the serverData and the role
         var connectionProperties = {
             data: serverData,
-            role: role
+            role: OpenViduRole.PUBLISHER
         };
 
         if (mapSessions[sessionName]) {
@@ -608,14 +627,14 @@ app.post('/session', (req, res) => {
                     console.error(error);
                 });
         }
-    }
+    
 });
 
 app.post('/leave-session', (req, res) => {
-    if (!isLogged(req.session)) {
-        req.session.destroy();
-        res.render('index.ejs');
-    } else {
+    // if (!isLogged(req.session)) {
+    //     req.session.destroy();
+    //     res.render('index.ejs');
+    // } else {
         // Retrieve params from POST body
         var sessionName = req.body.sessionname;
         var token = req.body.token;
@@ -647,7 +666,7 @@ app.post('/leave-session', (req, res) => {
             console.log(msg);
             res.status(500).send(msg);
         }
-    }
+    // }
 });
 
 /* REST API */
@@ -656,15 +675,15 @@ app.post('/leave-session', (req, res) => {
 
 /* AUXILIARY METHODS */
 
-function login(user, pass) {
-    return (user != null &&
-        pass != null &&
-        users.find(u => (u.user === user) && (u.pass === pass)));
-}
+// function login(user, pass) {
+//     return (user != null &&
+//         pass != null &&
+//         users.find(u => (u.user === user) && (u.pass === pass)));
+// }
 
-function isLogged(session) {
-    return (session.loggedUser != null);
-}
+// function isLogged(session) {
+//     return (session.loggedUser != null);
+// }
 
 function getBasicAuth() {
     return 'Basic ' + (new Buffer('OPENVIDUAPP:' + OPENVIDU_SECRET).toString('base64'));
