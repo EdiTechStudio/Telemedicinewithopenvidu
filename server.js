@@ -10,8 +10,10 @@ if (process.argv.length != 4) {
 }
 // For demo purposes we ignore self-signed certificate
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"
+<<<<<<< HEAD
 
 //new changes
+//My comment
 // Node imports
 var fast2sms = require("fast-two-sms");
 require("dotenv").config();
